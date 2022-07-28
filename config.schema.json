@@ -1,0 +1,66 @@
+{
+  "pluginAlias": "Smarteefi",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "Smarteefi"
+      },
+      "userid": {
+        "title": "Email ID",
+        "type": "string",
+        "required": true,
+        "default": "",
+        "description": "Your Smarteefi login Email ID."
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "required": true,
+        "default": "",
+        "description": "Your Smarteefi login password"
+      },
+      "refreshDelay": {
+        "title": "Polling frequency for status refresh (milliseconds)",
+        "type": "number",
+        "required": true,
+        "default": "60000",
+        "description": "Polling frequency for status refresh (milliseconds)"
+      },
+      "devices": {
+        "title": "List of Smarteefi Devices",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "title": "Device ID",
+          "required": true,
+          "default": "",
+          "description": "Smarteefi Device ID"
+        }
+      },
+      "ip": {
+        "title": "List of Device IP",
+        "type": "array",
+        "items": {
+          "type": "string",
+          "title": "Device IP",
+          "required": true,
+          "default": "",
+          "description": "Smarteefi Device IP"
+        }
+      },
+      "local": {
+        "title": "Local control if possible",
+        "type": "boolean",
+        "required": true,
+        "default": false,
+        "description": "Try UDP instead of TCP if possible"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "private": false,
+  "displayName": "Homebridge Smarteefi Platform with Local",
+  "name": "homebridge-smarteefi-local",
+  "version": "0.0.3",
+  "description": "Control Smarteefi via Homekit",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=10.17.0",
+    "homebridge": ">=1.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/abhilash0505/homebridge-smarteefi-local.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abhilash0505/homebridge-smarteefi-local/issues"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint src/**.ts --max-warnings=0",
+    "watch": "rimraf ./dist && npm run build && npm link && nodemon",
+    "build": "rimraf ./dist && tsc",
+    "prepublishOnly": "npm run lint && npm run build"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge-smarteefi"
+  ],
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "dgram": "^1.0.1",
+    "homebridge-config-ui-x": "^4.50.0",
+    "node-html-parser": "^5.2.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.31",
+    "@typescript-eslint/eslint-plugin": "^5.10.2",
+    "@typescript-eslint/parser": "^5.10.2",
+    "eslint": "^7.21.0",
+    "homebridge": "^1.5.0",
+    "nodemon": "^2.0.7",
+    "rimraf": "^3.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.2"
+  }
+}
