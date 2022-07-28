@@ -1,7 +1,7 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { SmarteefiDiscovery as SmarteefiDiscovery } from './lib/SmarteefiDiscovery';
 import { SwitchAccessory } from './lib/accessories/SwitchAccessory';
-import { Config, Device, DeviceStatus, IP } from './lib/Config';
+import { Config, Device, DeviceStatus } from './lib/Config';
 import { SmarteefiAPIHelper } from './lib/SmarteefiAPIHelper';
 
 const PLATFORM_NAME = 'Smarteefi';
