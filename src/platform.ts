@@ -77,12 +77,12 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
       //loop over the discovered devices and register each one if it has not already been registered
       for (const device of devices) {
         if (device) {
-          this.log.debug("DEVICE::");
-          this.log.debug(JSON.stringify(device));
+          // this.log.debug("DEVICE::");
+          // this.log.debug(JSON.stringify(device));
 
 
-          this.log.debug("CONFIG::");
-          this.log.debug(JSON.stringify(this.config));
+          // this.log.debug("CONFIG::");
+          // this.log.debug(JSON.stringify(this.config));
           
           // generate a unique id for the accessory this should be generated from
           // something globally unique, but constant, for example, the device serial
