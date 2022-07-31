@@ -16,9 +16,9 @@ export class SmarteefiDiscovery extends EventEmitter {
     }
 
     start(api, props, index, cb) {
-        this.log.info(`Trying to login...`);
+        // this.log.info(`Trying to login...`);
         this.config = new Config(props.userid, props.password, props.devices, props.ip);
-        this.log.debug(`With Config ::::::: ${JSON.stringify(props.devices)}`)
+        // this.log.debug(`With Config ::::::: ${JSON.stringify(props.devices)}`)
         const helper = SmarteefiAPIHelper.Instance(this.config, this.log);
         helper.login((b) => {
             if (!b) {

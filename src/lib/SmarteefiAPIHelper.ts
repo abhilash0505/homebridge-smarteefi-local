@@ -3,10 +3,7 @@ import { Config, Device } from "./Config";
 import { parse } from 'node-html-parser';
 import request from 'request';
 
-import udp, { Socket } from 'dgram';
-import bufferfrom from 'buffer';
-import { stat } from "fs";
-import {msleep} from 'usleep';
+import { SmarteefiLocalAPIHelper } from "./SmarteefiLocalAPIHelper";
 
 export class SmarteefiAPIHelper {
     private constructor(config: Config, log: Logger) {
@@ -17,7 +14,6 @@ export class SmarteefiAPIHelper {
         this.config = config;
         this.cookie = [];
         this.csrf = "";
-        this.client = udp.createSocket('udp4');
     }
 
     private userid = "";
@@ -28,7 +24,6 @@ export class SmarteefiAPIHelper {
     private static _instance: SmarteefiAPIHelper;
     private cookie: string[];
     private csrf: string;
-    private client: Socket;
 
     public static Instance(config: Config, log: Logger) {
         const c = this._instance || (this._instance = new this(config, log));
@@ -41,7 +36,7 @@ export class SmarteefiAPIHelper {
     login(cb) {
         this.log.info(`Logging in to the server ${this.apiHost}...`);
         this._loginApiCall(this.apiHost + "/login", {}, (_body) => {
-            if(!_body) {
+            if (!_body) {
                 this.log.warn("Unable to login. Retrying after 60 seconds...");
                 setTimeout(() => {
                     this.login(cb);
@@ -57,7 +52,7 @@ export class SmarteefiAPIHelper {
         let completedDevices = 0;
         for (let index = 0; index < devices.length; index++) {
             const deviceId = devices[index];
-            const ipAddress= ip[index];
+            const ipAddress = ip[index];
             const isThisFan = isFan[index];
 
             this._apiCall(`${this.apiHost}/namesettings?serial=${deviceId}`, "GET", {}, (_body, err) => {
@@ -94,60 +89,29 @@ export class SmarteefiAPIHelper {
     }
 
     setSwitchStatusLocally(deviceId: string, switchmap: number, statusmap: number, ip: string, isFan: boolean) {
-        const deviceIdStr = (Buffer.from(deviceId)).toString('hex');
-        const switchMapStr = switchmap > 10 ? (switchmap + "") : ("0" + switchmap);
-        const statusmapStr = statusmap > 10 ? (statusmap + "") : ("0" + statusmap);
+        const localHelper: SmarteefiLocalAPIHelper = SmarteefiLocalAPIHelper.Instance(this.log);
 
-        let UDPMessage = `cc 10 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ${deviceIdStr} 00 00 00 00 00 00 00 00 00 00 00 00 ${switchMapStr} 00 00 00 ${statusmapStr} 00 00 00 00 00 00 00 00 00 00 00`;
+        localHelper.setDeviceStatus(deviceId,
+            switchmap,
+            statusmap,
+            isFan,
+            ip);
 
-        if(isFan){
-            
-            let speed = 0;
-
-            if( statusmap === 1)
-                speed = 1;
-            else if (statusmap === 0)
-                speed = 0;
-            else
-                speed = statusmap - 158;
-
-            if(speed < 0)
-                speed = 1;
-
-            UDPMessage = `c0 12 20 00 e2 3b 0c 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ${deviceIdStr} 00 00 00 00 00 00 00 00 00 00 00 00 70 00 00 00 00 00 00 00 0${speed} 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00`
-            this.log.info(`FAN SPEED: ${speed}`);
-        } 
-
-
-        while(UDPMessage.indexOf(' ') >=0 )
-        UDPMessage = UDPMessage.replace(' ','');
-        this.log.info(UDPMessage);
-        const data = Buffer.from(UDPMessage, 'hex');
-
-        let _log = this.log;
-        this.client.send(data, 10201, ip, function(error){
-            if(error){
-                _log.debug("Oops!");
-            }else{
-                _log.debug('Data sent !!!');
-            }
-        });
-
-        this.client.on('message',function(msg,info){
-            _log.debug('Data received from server : ' + msg.toString());
-            _log.debug('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
-          });
+        localHelper.setDeviceStatus(deviceId, switchmap, statusmap, isFan, ip);
     }
 
     async setSwitchStatus(deviceId: string, deviceIp: string, switchmap: number, statusmap: number, isFan: boolean, cb) {
-        
-        //Would call the LAN UDP yet make an API call
-        if(this.config.local === true)   
+
+        if (this.config.local === true){
             this.setSwitchStatusLocally(deviceId, switchmap, statusmap, deviceIp, isFan);
+            return cb({
+                result: 'success'
+            });
+        }
 
         const commandObj = { "DeviceStatus": { "serial": deviceId, "switchmap": switchmap, "statusmap": statusmap } }
         const url = `${this.apiHost}/setstatus`;
-        
+
         await this._apiCall(url, "PUT", commandObj, (_body, err) => {
             let body = {
                 "result": "failure",
@@ -165,7 +129,7 @@ export class SmarteefiAPIHelper {
     }
 
     async getSwitchStatus(deviceId: string, switchmap: number, cb) {
-        this.log.debug(`Getting switch status for ${deviceId}...`);
+        this.log.debug(`Getting status for ${deviceId}...`);
         const commandObj = { "DeviceStatus": { "serial": deviceId, "switchmap": switchmap } }
 
         const url = `${this.apiHost}/getstatus`;
@@ -247,7 +211,7 @@ export class SmarteefiAPIHelper {
                     cb();
                 } else {
                     _this.setCookie(response2);
-                    _this.log.debug(b.toString())
+                    // _this.log.debug(b.toString())
                     cb(b.toString() || { "status": "success" });
                 }
             })

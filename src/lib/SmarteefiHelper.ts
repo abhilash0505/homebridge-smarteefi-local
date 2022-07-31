@@ -11,7 +11,7 @@ const getReason = (code) => {
 };
 
 const decodeStatus = (sequence: number, deviceId: string, characteristic: typeof Characteristic, deviceStatus: DeviceStatus) => {
-  const switchmap = Math.pow(2, sequence);
+  const switchmap = getSwitchMap(sequence);
   let statusmap = deviceStatus.getStatusMap(deviceId)?.statusmap || 0;
   statusmap &= switchmap;
   if (statusmap == 0) {
@@ -19,6 +19,10 @@ const decodeStatus = (sequence: number, deviceId: string, characteristic: typeof
   } else {
     return characteristic.Active.ACTIVE
   }
+}
+
+const getSwitchMap = (sequence: number) => {
+  return Math.pow(2, sequence);
 }
 
 
@@ -29,5 +33,6 @@ const getSwitchStatusMap = (_this) => {
 export {
   getReason,
   decodeStatus,
-  getSwitchStatusMap
+  getSwitchStatusMap,
+  getSwitchMap
 }

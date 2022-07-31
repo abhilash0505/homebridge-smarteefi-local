@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import { SmarteefiPlatform } from '../../platform';
-import { Config, DeviceStatus } from '../Config';
+import { Config, DeviceStatus, Status } from '../Config';
 import { SmarteefiAPIHelper } from '../SmarteefiAPIHelper';
 import * as SmarteefiHelper from '../SmarteefiHelper';
 import { STRINGS, MAX_FAN_SPEED_UNIT, BASE_FAN_SPEED } from '../../constants';
@@ -46,35 +46,17 @@ export class FanAccessory {
             .onSet(this.setONOFFState.bind(this))
             .onGet(this.getONOFFState.bind(this));
 
-        this.service.getCharacteristic(this.platform.Characteristic.CurrentFanState)
-            .onGet(this.getState.bind(this));
-
         this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
             .onGet(this.getSpeed.bind(this))
             .onSet(this.setSpeed.bind(this));
-
-    }
-
-    async getState(): Promise<CharacteristicValue> {
-        const switchmap = Math.pow(2, this.accessory.context.device.sequence);
-        let statusmap = SmarteefiHelper.getSwitchStatusMap(this);
-        if (statusmap === -1) {
-            throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-        }
-
-        statusmap &= switchmap;
-        if (statusmap === 0 || statusmap === BASE_FAN_SPEED) {
-            return this.platform.Characteristic.CurrentFanState.INACTIVE;
-        } else {
-            return this.platform.Characteristic.CurrentFanState.BLOWING_AIR;
-        }
     }
 
     async getSpeed(): Promise<CharacteristicValue> {
-        const switchmap = Math.pow(2, this.accessory.context.device.sequence);
+        const switchmap = SmarteefiHelper.getSwitchMap(this.accessory.context.device.sequence);
         let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
         if (statusmap === -1) {
-            throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            return 1;
+            // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }
         statusmap &= switchmap;
         if (statusmap === 0 || statusmap === BASE_FAN_SPEED) {
@@ -89,8 +71,7 @@ export class FanAccessory {
     async setSpeed(value: CharacteristicValue) {
         const switchmap = Math.pow(2, this.accessory.context.device.sequence);
         const speed = (Math.floor(Number(value) / (100 / MAX_FAN_SPEED_UNIT)) + BASE_FAN_SPEED);
-        this.platform.log.debug(`Changing Fan To Speed: ${speed}`);
-
+        
         this.apiHelper.setSwitchStatus(
             this.accessory.context.device.id,
             this.accessory.context.device.ip,
@@ -103,37 +84,14 @@ export class FanAccessory {
                     this.platform.log.error(`Failed to change device status due to error ${body.msg}`);
                 } else {
                     this.platform.log.info(`${this.accessory.displayName} is now ${(value as number) == 0 ? 'Off' : 'On'}`);
-                    setImmediate(this.platform.refreshStatus, this.platform, true);
+                    //setImmediate(this.platform.refreshStatus, this.platform, true);
                 }
             }
         );
     }
 
     async setONOFFState(value: CharacteristicValue) {
-        const switchmap = Math.pow(2, this.accessory.context.device.sequence);
-        let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
-        if (this.switchStates.On == (value as number)) {
-            statusmap &= ~switchmap;
-        } else {
-            statusmap |= switchmap;
-        }
-
-        this.apiHelper.setSwitchStatus(
-            this.accessory.context.device.id,
-            this.accessory.context.device.ip,
-            switchmap,
-            statusmap,
-            this.accessory.context.device.isFan,
-            (body) => {
-                this.platform.log.debug(JSON.stringify(body))
-                if (body.result != "success") {
-                    this.platform.log.error(`Failed to change device status due to error ${body.msg}`);
-                } else {
-                    this.platform.log.info(`${this.accessory.displayName} is now ${(value as number) == 0 ? 'Off' : 'On'}`);
-                    setImmediate(this.platform.refreshStatus, this.platform, true);
-                }
-            }
-        );
+        this.setSpeed(value as number * (100/MAX_FAN_SPEED_UNIT));
     }
 
     async setState(value: CharacteristicValue) {
@@ -157,7 +115,10 @@ export class FanAccessory {
                     this.platform.log.error(`Failed to change device status due to error ${body.msg}`);
                 } else {
                     this.platform.log.info(`${this.accessory.displayName} is now ${(value as number) == 0 ? 'Off' : 'On'}`);
-                    setImmediate(this.platform.refreshStatus, this.platform, true);
+                    if(this.platform.config.local)
+                        this.accessory.context.device.setState((value === 0) ? this.platform.Characteristic.Active.INACTIVE : this.platform.Characteristic.Active.ACTIVE);
+                    else
+                        setImmediate(this.platform.refreshStatus, this.platform, true);
                 }
             }
         );
