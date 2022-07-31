@@ -1,11 +1,12 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 import { SmarteefiDiscovery as SmarteefiDiscovery } from './lib/SmarteefiDiscovery';
 import { SwitchAccessory } from './lib/accessories/SwitchAccessory';
+import { FanAccessory } from './lib/accessories/FanAccessory';
 import { Config, Device, DeviceStatus } from './lib/Config';
 import { SmarteefiAPIHelper } from './lib/SmarteefiAPIHelper';
+import { PLATFORM_NAME, PLUGIN_NAME } from './constants';
+import * as SmarteefiHelper from './lib/SmarteefiHelper';
 
-const PLATFORM_NAME = 'Smarteefi';
-const PLUGIN_NAME = 'homebridge-smarteefi';
 /**
  * HomebridgePlatform
  * This class is the main constructor for your plugin, this is where you should
@@ -20,7 +21,6 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
   public early = false;
   private refreshDelay = 60000;
   private deviceStatus: DeviceStatus = DeviceStatus.Instance();
-
 
   constructor(
     public readonly log: Logger,
@@ -60,30 +60,34 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
    */
   discoverDevices() {
 
-    //if (!this.config.devices) return this.log.error("No devices configured. Please configure atleast one device.");
-    //if (!this.config.client_id) return this.log.error("Client ID is not configured. Please check your config.json");
-    //if (!this.config.secret) return this.log.error("Client Secret is not configured. Please check your config.json");
-    //if (!this.config.region) return this.log.error("Region is not configured. Please check your config.json");
-    //if (!this.config.deviceId) return this.log.error("IR Blaster device ID is not configured. Please check your config.json");
+    // if (!this.config.devices) return this.log.error("No devices configured. Please configure atleast one device.");
+    // if (!this.config.client_id) return this.log.error("Client ID is not configured. Please check your config.json");
+    // if (!this.config.secret) return this.log.error("Client Secret is not configured. Please check your config.json");
+    // if (!this.config.region) return this.log.error("Region is not configured. Please check your config.json");
+    // if (!this.config.deviceId) return this.log.error("IR Blaster device ID is not configured. Please check your config.json");
 
     this.log.info('Starting discovery...');
     const smarteefi: SmarteefiDiscovery = new SmarteefiDiscovery(this.log, this.api);
+    this.log.info(JSON.stringify(this.config));
     this.discover(smarteefi, 0, this.config.devices.length);
   }
 
   discover(smarteefi, i, total) {
     smarteefi.start(this.api, this.config, i, (devices: Device[], index) => {
-
-      this.log.debug(JSON.stringify(devices));
       //loop over the discovered devices and register each one if it has not already been registered
       for (const device of devices) {
         if (device) {
+          this.log.debug("DEVICE::");
+          this.log.debug(JSON.stringify(device));
 
+
+          this.log.debug("CONFIG::");
+          this.log.debug(JSON.stringify(this.config));
+          
           // generate a unique id for the accessory this should be generated from
           // something globally unique, but constant, for example, the device serial
           // number or MAC address
-          //device.ir_id = this.config.smartIR[index].deviceId;
-          const Accessory = SwitchAccessory;
+          //device.ir_id = this.config.smartIR[index].deviceId; 
           const uuid = this.api.hap.uuid.generate(device.id + "" + device.sequence);
 
           // see if an accessory with the same uuid has already been registered and restored from
@@ -95,13 +99,16 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
             this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
 
             // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
-            // existingAccessory.context.device = device;
-            // this.api.updatePlatformAccessories([existingAccessory]);
+            existingAccessory.context.device = device;
+            this.api.updatePlatformAccessories([existingAccessory]);
 
             // create the accessory handler for the restored accessory
             // this is imported from `platformAccessory.ts`
-            if (Accessory) {
-              new Accessory(this, existingAccessory);
+            if (SwitchAccessory || FanAccessory) {
+              if(device.isFan)
+                new FanAccessory(this, existingAccessory);
+              else
+                new SwitchAccessory(this, existingAccessory);
             } else {
               this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
               this.log.warn(`Removing unsupported accessory '${existingAccessory.displayName}'...`);
@@ -113,7 +120,7 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
             // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
           } else {
 
-            if (Accessory) {
+            if (SwitchAccessory || FanAccessory) {
               // the accessory does not yet exist, so we need to create it
               this.log.info('Adding new accessory:', device.name);
 
@@ -126,7 +133,10 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
 
               // create the accessory handler for the newly create accessory
               // this is imported from `platformAccessory.ts`
-              new Accessory(this, accessory);
+              if(device.isFan)
+                new FanAccessory(this, accessory);
+              else
+                new SwitchAccessory(this, accessory);
               // link the accessory to your platform
               this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
             } else {
@@ -150,14 +160,21 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
 
   refreshStatus(_this, onetime = false) {
     const totalDevices = _this.config.devices.length;
-    const apiHelper = SmarteefiAPIHelper.Instance(new Config(_this.config.userid, _this.config.password, _this.config.devices), _this.log);
+    const _config = new Config(
+      _this.config.userid, 
+      _this.config.password, 
+      _this.config.devices, 
+      _this.config.local
+    );
+    const apiHelper = SmarteefiAPIHelper.Instance(_config, _this.log);
     let completedUpdated = 0;
+
     for (let x = 0; x < totalDevices; x++) {
-      const deviceId = _this.config.devices[x];
+      const deviceId = _this.config.devices[x].device;
       apiHelper.getSwitchStatus(deviceId, 255, function (body) {
-        _this.log.debug(JSON.stringify(body));
+        // _this.log.debug(JSON.stringify(body));
         if (body.result == "error") {
-          _this.log.error(`Unable to get status for deviceId ${deviceId}. Reason: ${_this.getReason(body.major_ecode)}`)
+          _this.log.error(`Unable to get status for deviceId ${deviceId}. Reason: ${SmarteefiHelper.getReason(body.major_ecode)}`)
           _this.deviceStatus.setStatusMap(deviceId, -1, -1);
         } else {
           _this.deviceStatus.setStatusMap(deviceId, body.switchmap, body.statusmap);
@@ -182,23 +199,8 @@ export class SmarteefiPlatform implements DynamicPlatformPlugin {
       });
     }
   }
-  decodeStatus(sequence: number, deviceId: string) {
-    const switchmap = Math.pow(2, sequence);
-    let statusmap = this.deviceStatus.getStatusMap(deviceId)?.statusmap || 0;
-    statusmap &= switchmap;
-    if (statusmap == 0) {
-      return this.Characteristic.Active.INACTIVE
-    } else {
-      return this.Characteristic.Active.ACTIVE
-    }
-  }
 
-  getReason(code) {
-    switch (code) {
-      case 6:
-        return "Device offline";
-      default:
-        return "Unknown error: " + code;
-    }
+  decodeStatus(sequence: number, deviceId: string) {
+    return SmarteefiHelper.decodeStatus(sequence, deviceId, this.Characteristic, this.deviceStatus);
   }
 }

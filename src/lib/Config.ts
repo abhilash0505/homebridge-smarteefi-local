@@ -3,11 +3,22 @@ export class Config {
     public password = "";
     public devices: string[] = [];
     public ip: string[] = [];
-    constructor(userid?: string, password?: string, devices?: string[], ip?: string[]) {
+    public isFan: boolean[] = [];
+    public local: boolean = false;
+    constructor(userid?: string, password?: string, devices?: object[], local?: boolean) {
         this.userid = userid || "";
         this.password = password || "";
-        this.devices = devices || [];
-        this.ip = ip || [];
+        this.devices = [];
+        this.ip = [];
+        this.isFan = [];
+        
+        devices?.forEach((device) => {
+            this.devices.push(device["device"]);
+            this.ip.push(device["ip"]);
+            this.isFan.push(device["isFan"]);
+        })
+        
+        this.local = local || false;
     }
 }
 
@@ -16,10 +27,13 @@ export class Device {
     public name = "Unknown";
     public sequence = 0;
     public ip = null;
-    constructor(id, sequence, name) {
+    public isFan = false;
+    constructor(id, sequence, name, ip, isFan) {
         this.id    = id;
         this.sequence = sequence;
         this.name   = name;
+        this.ip = ip;
+        this.isFan = isFan;
     }
 }
 

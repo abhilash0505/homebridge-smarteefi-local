@@ -6,7 +6,7 @@ import request from 'request';
 import udp, { Socket } from 'dgram';
 import bufferfrom from 'buffer';
 import { stat } from "fs";
-
+import {msleep} from 'usleep';
 
 export class SmarteefiAPIHelper {
     private constructor(config: Config, log: Logger) {
@@ -52,11 +52,14 @@ export class SmarteefiAPIHelper {
         });
     }
 
-    fetchDevices(devices: string[], cb) {
+    fetchDevices(devices: string[], ip: string[], isFan: boolean[], cb) {
         const discoveredDevices: Device[] = [];
         let completedDevices = 0;
         for (let index = 0; index < devices.length; index++) {
             const deviceId = devices[index];
+            const ipAddress= ip[index];
+            const isThisFan = isFan[index];
+
             this._apiCall(`${this.apiHost}/namesettings?serial=${deviceId}`, "GET", {}, (_body, err) => {
                 if (err) {
                     this.log.error("Failed to get device details: " + deviceId);
@@ -72,7 +75,7 @@ export class SmarteefiAPIHelper {
                         const device = body.querySelector(`#deviceconfig-switchnames-${counter}`);
                         if (device != null) {
                             this.log.info(`Discovered switch ${device.attributes['value']}`)
-                            const dev = new Device(deviceId, counter, device.attributes['value']);
+                            const dev = new Device(deviceId, counter, device.attributes['value'], ipAddress, isThisFan);
                             discoveredDevices.push(dev);
                             counter++;
                         } else {
@@ -90,31 +93,60 @@ export class SmarteefiAPIHelper {
         }
     }
 
-    setSwitchStatusLocally(deviceId: string, switchmap: number, statusmap: number, ip: string) {
+    setSwitchStatusLocally(deviceId: string, switchmap: number, statusmap: number, ip: string, isFan: boolean) {
         const deviceIdStr = (Buffer.from(deviceId)).toString('hex');
         const switchMapStr = switchmap > 10 ? (switchmap + "") : ("0" + switchmap);
         const statusmapStr = statusmap > 10 ? (statusmap + "") : ("0" + statusmap);
+
         let UDPMessage = `cc 10 10 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ${deviceIdStr} 00 00 00 00 00 00 00 00 00 00 00 00 ${switchMapStr} 00 00 00 ${statusmapStr} 00 00 00 00 00 00 00 00 00 00 00`;
+
+        if(isFan){
+            
+            let speed = 0;
+
+            if( statusmap === 1)
+                speed = 1;
+            else if (statusmap === 0)
+                speed = 0;
+            else
+                speed = statusmap - 158;
+
+            if(speed < 0)
+                speed = 1;
+
+            UDPMessage = `c0 12 20 00 e2 3b 0c 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ${deviceIdStr} 00 00 00 00 00 00 00 00 00 00 00 00 70 00 00 00 00 00 00 00 0${speed} 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00`
+            this.log.info(`FAN SPEED: ${speed}`);
+        } 
+
+
         while(UDPMessage.indexOf(' ') >=0 )
-            UDPMessage = UDPMessage.replace(' ','');
-        
+        UDPMessage = UDPMessage.replace(' ','');
+        this.log.info(UDPMessage);
         const data = Buffer.from(UDPMessage, 'hex');
+
+        let _log = this.log;
         this.client.send(data, 10201, ip, function(error){
             if(error){
-                console.log("Oops!");
+                _log.debug("Oops!");
             }else{
-                console.log('Data sent !!!');
+                _log.debug('Data sent !!!');
             }
         });
+
+        this.client.on('message',function(msg,info){
+            _log.debug('Data received from server : ' + msg.toString());
+            _log.debug('Received %d bytes from %s:%d\n',msg.length, info.address, info.port);
+          });
     }
 
-    async setSwitchStatus(deviceId: string, switchmap: number, statusmap: number, cb) {
-        const IPIndex = this.config.devices.indexOf(deviceId);
-        const ip = this.config.ip[IPIndex];
-        this.setSwitchStatusLocally(deviceId, switchmap, statusmap, ip);
+    async setSwitchStatus(deviceId: string, deviceIp: string, switchmap: number, statusmap: number, isFan: boolean, cb) {
+        
+        //Would call the LAN UDP yet make an API call
+        if(this.config.local === true)   
+            this.setSwitchStatusLocally(deviceId, switchmap, statusmap, deviceIp, isFan);
+
         const commandObj = { "DeviceStatus": { "serial": deviceId, "switchmap": switchmap, "statusmap": statusmap } }
         const url = `${this.apiHost}/setstatus`;
-        this.log.debug(JSON.stringify(commandObj));
         
         await this._apiCall(url, "PUT", commandObj, (_body, err) => {
             let body = {

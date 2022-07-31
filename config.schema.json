@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "Smarteefi",
+  "pluginAlias": "Smarteefi-local",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -9,7 +9,7 @@
         "title": "Name",
         "type": "string",
         "required": true,
-        "default": "Smarteefi"
+        "default": "Smarteefi-local"
       },
       "userid": {
         "title": "Email ID",
@@ -36,22 +36,30 @@
         "title": "List of Smarteefi Devices",
         "type": "array",
         "items": {
-          "type": "string",
-          "title": "Device ID",
-          "required": true,
-          "default": "",
-          "description": "Smarteefi Device ID"
-        }
-      },
-      "ip": {
-        "title": "List of Device IP",
-        "type": "array",
-        "items": {
-          "type": "string",
-          "title": "Device IP",
-          "required": true,
-          "default": "",
-          "description": "Smarteefi Device IP"
+          "type": "object",
+          "properties": {
+            "device": {
+              "type": "string",
+              "title": "Device ID",
+              "description": "Smarteefi Device ID",
+              "required": true,
+              "default": ""
+            },
+            "ip": {
+              "type": "string",
+              "title": "IP Address",
+              "description": "IP address of Smarteefi Device",
+              "required": true,
+              "default": ""
+            },
+            "isFan": {
+              "type": "boolean",
+              "title": "Is FAN",
+              "description": "Is this a FAN Switch?",
+              "required": true,
+              "default": false
+            }
+          }
         }
       },
       "local": {

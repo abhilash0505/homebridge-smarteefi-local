@@ -17,14 +17,15 @@ export class SmarteefiDiscovery extends EventEmitter {
 
     start(api, props, index, cb) {
         this.log.info(`Trying to login...`);
-        this.config = new Config(props.userid, props.password, props.devices);
+        this.config = new Config(props.userid, props.password, props.devices, props.ip);
+        this.log.debug(`With Config ::::::: ${JSON.stringify(props.devices)}`)
         const helper = SmarteefiAPIHelper.Instance(this.config, this.log);
         helper.login((b) => {
             if (!b) {
                 cb([], -1);
             } else {
                 this.log.info("Fetching configured switches...");
-                helper.fetchDevices(this.config.devices, (devs: Device[]) => {
+                helper.fetchDevices(this.config.devices, this.config.ip, this.config.isFan,(devs: Device[]) => {
                     if (!devs) {
                         throw new this.api.hap.HapStatusError(this.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
                     }
