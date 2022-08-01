@@ -4,49 +4,35 @@ import { Config, DeviceStatus, Status } from '../Config';
 import { SmarteefiAPIHelper } from '../SmarteefiAPIHelper';
 import * as SmarteefiHelper from '../SmarteefiHelper';
 import { STRINGS, MAX_FAN_SPEED_UNIT, BASE_FAN_SPEED } from '../../constants';
+import { BaseAccessory } from './BaseAccessory';
 
-export class FanAccessory {
-    private service: Service;
-
+export class FanAccessory extends BaseAccessory {
     private switchStates = {
         On: this.platform.Characteristic.Active.INACTIVE
     };
 
-    private apiHelper: SmarteefiAPIHelper;
-    private deviceStatus: DeviceStatus = DeviceStatus.Instance();
-
     constructor(
-        private readonly platform: SmarteefiPlatform,
-        private readonly accessory: PlatformAccessory,
+        platform: SmarteefiPlatform,
+        accessory: PlatformAccessory,
     ) {
-        this.apiHelper = SmarteefiAPIHelper.Instance(new Config(platform.config.userid, platform.config.password, platform.config.devices, platform.config.local), platform.log);
+        super(platform, accessory);
 
-        // set accessory information
-        const accessoryService = this.accessory.getService(this.platform.Service.AccessoryInformation);
-
-        if (accessoryService) {
-            accessoryService.setCharacteristic(this.platform.Characteristic.Manufacturer, STRINGS.BRAND);
-            accessoryService.setCharacteristic(this.platform.Characteristic.Model, STRINGS.FAN);
-            accessoryService.setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.id);
+        if (this.accessoryService) {
+            this.accessoryService.setCharacteristic(this.platform.Characteristic.Model, STRINGS.FAN);
         }
 
-        const fanService = this.platform.Service.Fanv2;
-        let service = this.accessory.getService(fanService);
-        if (!service)
-            service = this.accessory.addService(fanService);
-
-        this.service = service;
-        this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
+        this.platformService = this.platform.Service.Fanv2;
+        this.setService();
 
         // each service must implement at-minimum the "required characteristics" for the given service type
         // see https://developers.homebridge.io/#/service/FanV2
 
         // register handlers for the On/Off Characteristic
-        this.service.getCharacteristic(this.platform.Characteristic.Active)
+        (this.service as Service).getCharacteristic(this.platform.Characteristic.Active)
             .onSet(this.setONOFFState.bind(this))
             .onGet(this.getONOFFState.bind(this));
 
-        this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
+        (this.service as Service).getCharacteristic(this.platform.Characteristic.RotationSpeed)
             .onGet(this.getSpeed.bind(this))
             .onSet(this.setSpeed.bind(this));
     }
@@ -55,23 +41,16 @@ export class FanAccessory {
         const switchmap = SmarteefiHelper.getSwitchMap(this.accessory.context.device.sequence);
         let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
         if (statusmap === -1) {
-            return 1;
-            // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+            throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }
-        statusmap &= switchmap;
-        if (statusmap === 0 || statusmap === BASE_FAN_SPEED) {
-            return 0;
-        } else {
-            if (statusmap > BASE_FAN_SPEED)
-                statusmap -= BASE_FAN_SPEED;
-            return ((statusmap) / MAX_FAN_SPEED_UNIT) * 100;
-        }
+
+        return SmarteefiHelper.getSpeedFromStatusMap(statusmap, switchmap);
     }
 
     async setSpeed(value: CharacteristicValue) {
         const switchmap = Math.pow(2, this.accessory.context.device.sequence);
-        const speed = (Math.floor(Number(value) / (100 / MAX_FAN_SPEED_UNIT)) + BASE_FAN_SPEED);
-        
+        const speed = SmarteefiHelper.getSpeedFromFloat(value);
+
         this.apiHelper.setSwitchStatus(
             this.accessory.context.device.id,
             this.accessory.context.device.ip,
@@ -84,45 +63,14 @@ export class FanAccessory {
                     this.platform.log.error(`Failed to change device status due to error ${body.msg}`);
                 } else {
                     this.platform.log.info(`${this.accessory.displayName} is now ${(value as number) == 0 ? 'Off' : 'On'}`);
-                    //setImmediate(this.platform.refreshStatus, this.platform, true);
+                    setImmediate(this.platform.refreshStatus, this.platform, true);
                 }
             }
         );
     }
 
     async setONOFFState(value: CharacteristicValue) {
-        this.setSpeed(value as number * (100/MAX_FAN_SPEED_UNIT));
-    }
-
-    async setState(value: CharacteristicValue) {
-        const switchmap = Math.pow(2, this.accessory.context.device.sequence);
-        let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
-        if (this.switchStates.On == (value as number)) {
-            statusmap &= ~switchmap;
-        } else {
-            statusmap |= switchmap;
-        }
-
-        this.apiHelper.setSwitchStatus(
-            this.accessory.context.device.id,
-            this.accessory.context.device.ip,
-            switchmap,
-            statusmap,
-            this.accessory.context.device.isFan,
-            (body) => {
-                this.platform.log.debug(JSON.stringify(body))
-                if (body.result != "success") {
-                    this.platform.log.error(`Failed to change device status due to error ${body.msg}`);
-                } else {
-                    this.platform.log.info(`${this.accessory.displayName} is now ${(value as number) == 0 ? 'Off' : 'On'}`);
-                    if(this.platform.config.local)
-                        this.accessory.context.device.setState((value === 0) ? this.platform.Characteristic.Active.INACTIVE : this.platform.Characteristic.Active.ACTIVE);
-                    else
-                        setImmediate(this.platform.refreshStatus, this.platform, true);
-                }
-            }
-        );
-
+        this.setSpeed(value as number * (100 / MAX_FAN_SPEED_UNIT));
     }
 
     async getONOFFState(): Promise<CharacteristicValue> {
@@ -131,7 +79,7 @@ export class FanAccessory {
         if (statusmap === -1) {
             throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }
-        statusmap &= switchmap;
+        // statusmap &= switchmap;
         if (statusmap === 0 || statusmap === BASE_FAN_SPEED) {
             return this.platform.Characteristic.Active.INACTIVE
         } else {
