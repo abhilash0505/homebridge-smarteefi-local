@@ -50,7 +50,7 @@ export class SwitchAccessory extends BaseAccessory {
 
         this.apiHelper.setSwitchStatus(
             this.accessory.context.device.id,
-            this.accessory.context.device,
+            this.accessory.context.device.ip,
             switchmap,
             statusmap,
             false,
