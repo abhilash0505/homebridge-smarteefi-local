@@ -1,0 +1,1 @@
+![NPM Status](https://badgen.net/npm/v/homebridge-smarteefi-local)
