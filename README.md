@@ -1,5 +1,7 @@
 ![NPM Status](https://badgen.net/npm/v/homebridge-smarteefi-local)
 
+![alt text](./docs/logo.png)
+
 # Homebridge Smarteefi Local Integration
 
 ## Setup
@@ -11,13 +13,16 @@ npm install -g homebridge-smarteefi-local
 ## Configuration
 
 Enter the following values
-- Username
-- Password
-- Device Details(required)
-  - Device ID (find in smarteefi app)
-  - IP address (better if Address Reservation is done in your router)
-  - isFAN (Fans have a different logic)
-- Local? (Local will only work if this option is setup)
+- **Username**
+- **Password**
+- **Device Details**(required)
+  ![Device Details](./docs/config_fan.png)
+  - **Device ID** (find in smarteefi app)
+  - **IP address** (better if Address Reservation is done in your router)
+  - **isFAN** (Fans have a different logic)
+- **Local**? (Local will only work if this option is setup)
+![LAN Config](./docs/config_lan.png)
+
 
 ## Reverse Engineering
 
