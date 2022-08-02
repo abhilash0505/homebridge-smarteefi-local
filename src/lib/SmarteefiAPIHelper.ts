@@ -66,14 +66,24 @@ export class SmarteefiAPIHelper {
                     let devicesAvailable = true;
                     let counter = 0;
 
+                    const module = body.querySelector(`#deviceconfig-name`);
+                    const moduleName = module?.attributes['value'];
+
                     while (devicesAvailable) {
                         const device = body.querySelector(`#deviceconfig-switchnames-${counter}`);
                         if (device != null) {
-                            this.log.info(`Discovered switch ${device.attributes['value']}`)
+                            this.log.info(`Discovered switch ${device.attributes['value']} in ${moduleName} Module`);
                             const dev = new Device(deviceId, counter, device.attributes['value'], ipAddress, isThisFan);
                             discoveredDevices.push(dev);
                             counter++;
                         } else {
+                            //Logic from https://www.smarteefi.com/site/namesettings?serial=*
+                            if(deviceId.indexOf('ft41') === 0){
+                                this.log.info(`Automatically Adding FAN in ${moduleName} Module`);
+                                const dev = new Device(deviceId, counter, `${moduleName} Fan`, ipAddress, true);
+                                discoveredDevices.push(dev);
+                                counter++;
+                            }
                             this.log.info("No more devices..")
                             devicesAvailable = false;
                             break;
