@@ -42,3 +42,8 @@ Smarteefi web portal is used to emulate the cloud interaction. Device states are
 - Fan - ON/OFF/Set Speed; Works but Fan control maybe buggy
 - Switch/Fan Module - TBD
 - Anything else? - TBD
+
+## Gotchas
+The web portal of Smarteefi does not accurately work for FAN modules. If you have a dedicated FAN module or a module with FAN, the current power/speed is determined by the operations performed on HomeBridge.
+
+Additionally, the web portal does not support 5 devices in a module. A special "hack" has been added to support the same. It assumes that in a 5 module device with a specific series in serial #, the last module is a fan. 
