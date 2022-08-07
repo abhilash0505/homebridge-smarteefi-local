@@ -22,8 +22,8 @@ export class BaseAccessory {
 
         if (this.accessoryService) {
             this.accessoryService.setCharacteristic(this.platform.Characteristic.Manufacturer, STRINGS.BRAND);
-            let uuid = accessory.context.device.id + '-' +Math.round(Math.random() * 100);
-            this.accessoryService.setCharacteristic(this.platform.Characteristic.SerialNumber, uuid);
+            this.accessoryService.setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.id);
+            this.accessoryService.setCharacteristic(this.platform.Characteristic.Identifier, Math.round(Math.random()* 100));
         }
     }
 

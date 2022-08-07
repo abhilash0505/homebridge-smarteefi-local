@@ -47,11 +47,17 @@ const getSpeedFromFloat = (value) => {
   return (Math.floor(Number(value) / (100 / MAX_FAN_SPEED_UNIT)) + BASE_FAN_SPEED);
 }
 
+const setCorrectDeviceID = (id) => {
+  const idSplit = id.split('-');
+  return idSplit[0];
+}
+
 export {
   getReason,
   decodeStatus,
   getSwitchStatusMap,
   getSwitchMap,
   getSpeedFromStatusMap,
-  getSpeedFromFloat
+  getSpeedFromFloat,
+  setCorrectDeviceID
 }
