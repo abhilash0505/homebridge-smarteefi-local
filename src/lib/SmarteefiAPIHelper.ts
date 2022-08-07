@@ -4,6 +4,7 @@ import { parse } from 'node-html-parser';
 import request from 'request';
 
 import { SmarteefiLocalAPIHelper } from "./SmarteefiLocalAPIHelper";
+import * as SmarteefiHelper from "./SmarteefiHelper";
 
 export class SmarteefiAPIHelper {
     private constructor(config: Config, log: Logger) {
@@ -119,7 +120,7 @@ export class SmarteefiAPIHelper {
             });
         }
 
-        const commandObj = { "DeviceStatus": { "serial": deviceId, "switchmap": switchmap, "statusmap": statusmap } }
+        const commandObj = { "DeviceStatus": { "serial": SmarteefiHelper.setCorrectDeviceID(deviceId), "switchmap": switchmap, "statusmap": statusmap } }
         const url = `${this.apiHost}/setstatus`;
 
         await this._apiCall(url, "PUT", commandObj, (_body, err) => {
