@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Homebridge Smarteefi Platform",
   "name": "homebridge-smarteefi-local",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Control Smarteefi via Homekit",
   "license": "Apache-2.0",
   "engines": {

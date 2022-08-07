@@ -23,7 +23,6 @@ export class BaseAccessory {
         if (this.accessoryService) {
             this.accessoryService.setCharacteristic(this.platform.Characteristic.Manufacturer, STRINGS.BRAND);
             this.accessoryService.setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.id);
-            this.accessoryService.setCharacteristic(this.platform.Characteristic.Identifier, Math.round(Math.random()* 100));
         }
     }
 
