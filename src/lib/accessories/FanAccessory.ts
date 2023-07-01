@@ -39,7 +39,7 @@ export class FanAccessory extends BaseAccessory {
 
     async getSpeed(): Promise<CharacteristicValue> {
         const switchmap = SmarteefiHelper.getSwitchMap(this.accessory.context.device.sequence);
-        let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
+        const statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
         if (statusmap === -1) {
             throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }
@@ -75,7 +75,7 @@ export class FanAccessory extends BaseAccessory {
 
     async getONOFFState(): Promise<CharacteristicValue> {
         const switchmap = Math.pow(2, this.accessory.context.device.sequence);
-        let statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
+        const statusmap = this.deviceStatus.getStatusMap(this.accessory.context.device.id)?.statusmap || 0;
         if (statusmap === -1) {
             throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
         }

@@ -4,7 +4,7 @@ export class Config {
     public devices: string[] = [];
     public ip: string[] = [];
     public isFan: boolean[] = [];
-    public local: boolean = false;
+    public local = false;
     constructor(userid?: string, password?: string, devices?: object[], local?: boolean) {
         this.userid = userid || "";
         this.password = password || "";

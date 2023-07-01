@@ -5,7 +5,6 @@ import request from 'request';
 
 import { SmarteefiLocalAPIHelper } from "./SmarteefiLocalAPIHelper";
 import * as SmarteefiHelper from "./SmarteefiHelper";
-
 export class SmarteefiAPIHelper {
     private constructor(config: Config, log: Logger) {
         this.userid = config.userid;
@@ -25,6 +24,7 @@ export class SmarteefiAPIHelper {
     private static _instance: SmarteefiAPIHelper;
     private cookie: string[];
     private csrf: string;
+    private httpsAgent: unknown;
 
     public static Instance(config: Config, log: Logger) {
         const c = this._instance || (this._instance = new this(config, log));
@@ -61,9 +61,9 @@ export class SmarteefiAPIHelper {
                     this.log.error("Failed to get device details: " + deviceId);
                     cb([]);
                 } else {
-                    //this.log.info(_body)
+                    this.log.info(_body)
                     const body = parse(_body);
-                    // this.log.info(body.toString());
+                    this.log.info(body.toString());
                     let devicesAvailable = true;
                     let counter = 0;
 
@@ -79,11 +79,13 @@ export class SmarteefiAPIHelper {
                             counter++;
                         } else {
                             //Logic from https://www.smarteefi.com/site/namesettings?serial=*
-                            if(deviceId.indexOf('ft41') === 0){
-                                this.log.info(`Automatically Adding FAN in ${moduleName} Module`);
-                                const dev = new Device(deviceId, counter, `${moduleName} Fan`, ipAddress, true);
-                                discoveredDevices.push(dev);
-                                counter++;
+                            if(deviceId) {
+                                if (deviceId.indexOf('ft41') === 0) {
+                                    this.log.info(`Automatically Adding FAN in ${moduleName} Module`);
+                                    const dev = new Device(deviceId, counter, `${moduleName} Fan`, ipAddress, true);
+                                    discoveredDevices.push(dev);
+                                    counter++;
+                                }
                             }
                             this.log.info("No more devices..")
                             devicesAvailable = false;
@@ -212,7 +214,6 @@ export class SmarteefiAPIHelper {
                     const b = parse(body2);
                     e = b?.querySelector(".site-error h1")?.innerHTML;
                     title = "" + b?.querySelector("title")?.innerHTML;
-                    // eslint-disable-next-line no-empty
                 } catch (error) {
                     _this.log.error("Unable to parse body or HTML");
                 }
@@ -222,7 +223,6 @@ export class SmarteefiAPIHelper {
                     cb();
                 } else {
                     _this.setCookie(response2);
-                    // _this.log.debug(b.toString())
                     cb(b.toString() || { "status": "success" });
                 }
             })
