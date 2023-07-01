@@ -61,9 +61,7 @@ export class SmarteefiAPIHelper {
                     this.log.error("Failed to get device details: " + deviceId);
                     cb([]);
                 } else {
-                    this.log.info(_body)
                     const body = parse(_body);
-                    this.log.info(body.toString());
                     let devicesAvailable = true;
                     let counter = 0;
 
